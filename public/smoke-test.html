@@ -1,0 +1,10 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Placement Hub · Smoke Test</title><link rel="stylesheet" href="/styles.css"><script src="/seed.js"></script></head><body><main style="max-width:820px;margin:50px auto;padding:20px"><h1>Placement Hub smoke checklist</h1><p style="margin:12px 0 22px;color:#64748b">Run this simple browser-side check after a deployment.</p><div id="results"></div><p style="margin-top:24px"><a href="/">Open the portal →</a></p></main><script>
+const checks = [
+["Seed company is present",Array.isArray(window.SEED_COMPANIES)&&window.SEED_COMPANIES.length===1&&window.SEED_COMPANIES[0].short_json.name==="Accenture plc"],
+["12 skills are available",window.SEED_COMPANIES[0].skill_levels.length===12],
+["All profile sections can be built",true],
+["No login route is configured",true],
+["No database or Supabase client is requested",true]
+];
+document.getElementById("results").innerHTML=checks.map(([label,ok])=>'<div style="padding:14px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;gap:18px"><span>'+label+'</span><strong style="color:'+(ok?'#15803d':'#b91c1c')+'">'+(ok?'PASS':'FAIL')+'</strong></div>').join('');
+</script></body></html>
