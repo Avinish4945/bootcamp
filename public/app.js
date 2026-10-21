@@ -286,7 +286,7 @@
         <${Route} path="skills" element=${html`<${CompanyGate}><${SkillIntelligence}/><//>`}/>
       <//>
       <${Route} path="*" element=${html`<${NotFound}/>`}/>
-    <//><//>`;
+    <//><//><//>`;
   }
   ReactDOM.createRoot(document.getElementById("root")).render(html`<${App}/>`);
 })();
