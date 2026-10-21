@@ -165,13 +165,13 @@
       <div class="side-footer"><button class="side-link" title="All Companies" onClick=${()=>navigate("/")}><${Icon} name="home" size=${18}/><span>All Companies</span></button><button class="side-link" title="Collapse sidebar" onClick=${()=>setCollapsed(v=>!v)}><span style=${{display:"inline-flex",fontSize:17}}>${collapsed?"»":"«"}</span><span>Collapse</span></button></div>
     </aside>`;
   }
-  function AppLayout() {
+  function AppLayout({children}) {
     const navigate=useNavigate(), {selected}=useCompany();
     const [mobileMenu,setMobileMenu]=useState(false);
     return html`<div>
       <header class="topbar"><span class="brand-mark">J</span><span class="wordmark">JSSATEN <span style=${{color:"#94a3b8",fontWeight:500}}>Placement Intelligence</span></span><span class="spacer"></span><span class="top-pill">RESEARCH PORTAL</span></header>
       <div class="layout"><${AppSidebar}/>
-        <main class="main"><div class="main-head"><button class="icon-btn hide-desktop" onClick=${()=>setMobileMenu(v=>!v)} aria-label="Open navigation"><${Icon} name="menu" size=${17}/></button><span>Company research</span><span style=${{color:"#cbd5e1"}}>/</span><span class="crumb-current">${selected?selected.companyName:"Selected company"}</span><span style=${{marginLeft:"auto",fontSize:11,color:"#94a3b8"}}>JSSATEN</span></div><Outlet/></main>
+        <main class="main"><div class="main-head"><button class="icon-btn hide-desktop" onClick=${()=>setMobileMenu(v=>!v)} aria-label="Open navigation"><${Icon} name="menu" size=${17}/></button><span>Company research</span><span style=${{color:"#cbd5e1"}}>/</span><span class="crumb-current">${selected?selected.companyName:"Selected company"}</span><span style=${{marginLeft:"auto",fontSize:11,color:"#94a3b8"}}>JSSATEN</span></div>${children}</main>
       </div>
       ${mobileMenu?html`<div class="mobile-backdrop" style=${{display:"block",position:"fixed",inset:0,zIndex:80,background:"rgba(15,23,42,.25)"}} onClick=${()=>setMobileMenu(false)}><div style=${{position:"absolute",left:0,top:0,bottom:0,width:250,background:"#f8fafc",padding:20}} onClick=${e=>e.stopPropagation()}><h3 style=${{fontSize:16,marginBottom:20}}>Research tools</h3><button class="side-link" onClick=${()=>{navigate("/company/intelligence");setMobileMenu(false)}}>▦ <span>Company Intelligence</span></button><button class="side-link" onClick=${()=>{navigate("/company/skills");setMobileMenu(false)}}>⌘ <span>Skill Intelligence</span></button><button class="side-link" onClick=${()=>navigate("/")}>⌂ <span>All Companies</span></button></div></div>`:null}
     </div>`;
@@ -280,11 +280,9 @@
   function App() {
     return html`<${CompanyProvider}><${BrowserRouter}><${Routes}>
       <${Route} path="/" element=${html`<${Index}/>`}/>
-      <${Route} path="/company" element=${html`<${AppLayout}/>`}>
-        <${Route} index element=${html`<${Navigate} to="intelligence" replace/>`}/>
-        <${Route} path="intelligence" element=${html`<${CompanyGate}><${CompanyIntelligence}/><//>`}/>
-        <${Route} path="skills" element=${html`<${CompanyGate}><${SkillIntelligence}/><//>`}/>
-      <//>
+      <${Route} path="/company" element=${html`<${Navigate} to="/company/intelligence" replace/>`}/>
+      <${Route} path="/company/intelligence" element=${html`<${AppLayout}><${CompanyGate}><${CompanyIntelligence}/><//><//>`}/>
+      <${Route} path="/company/skills" element=${html`<${AppLayout}><${CompanyGate}><${SkillIntelligence}/><//><//>`}/>
       <${Route} path="*" element=${html`<${NotFound}/>`}/>
     <//><//><//>`;
   }
