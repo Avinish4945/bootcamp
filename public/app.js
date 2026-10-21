@@ -106,8 +106,8 @@
     const token = window.VITE_LOGO_DEV_PUBLISHABLE_KEY || "";
     const logoDevSrc = token ? "https://img.logo.dev/"+logoDomain(company.short_json.website_url||src)+"?token="+encodeURIComponent(token) : "";
     const source = !failed && logoDevSrc ? logoDevSrc : src;
-    if (!source || failed && (!src || source===src)) return html`<span className=${"logo-fallback "+className} aria-label="Company logo fallback">${(company.short_json.short_name||company.short_json.name||"C").slice(0,1)}</span>`;
-    return html`<img className=${"company-logo "+className} src=${source} alt=${company.short_json.short_name+" logo"} onError=${()=>setFailed(true)} />`;
+    if (!source || failed && (!src || source===src)) return html`<span class=${"logo-fallback "+className} aria-label="Company logo fallback">${(company.short_json.short_name||company.short_json.name||"C").slice(0,1)}</span>`;
+    return html`<img class=${"company-logo "+className} src=${source} alt=${company.short_json.short_name+" logo"} onError=${()=>setFailed(true)} />`;
   }
   function categoryStyle(category) {
     const colors = {"Super Dream":"#7c3aed","Dream":"#2563eb","Standard":"#16a34a","Regular":"#d97706"};
@@ -116,14 +116,14 @@
   function CompanyCard({company,onSelect}) {
     const s=company.short_json;
     const negative=String(s.yoy_growth_rate||"").trim().startsWith("-");
-    return html`<button className="company-card" onClick=${()=>onSelect(company)} aria-label=${"Open company intelligence for "+s.name}>
-      <div className="card-head"><${CompanyLogo} company=${company}/><span className="category-badge" style=${categoryStyle(s.company_type)}>${s.company_type}</span></div>
-      <h3>${s.name}</h3><div className="short-name">${s.short_name}</div>
-      <div className="company-meta">
-        <div className="meta-row"><${Icon} name="map" size=${14}/><span>${s.headquarters_address||"Not publicly available"}</span></div>
-        <div className="meta-row"><${Icon} name="users" size=${14}/><span>${s.employee_size||"Not publicly available"}</span></div>
+    return html`<button class="company-card" onClick=${()=>onSelect(company)} aria-label=${"Open company intelligence for "+s.name}>
+      <div class="card-head"><${CompanyLogo} company=${company}/><span class="category-badge" style=${categoryStyle(s.company_type)}>${s.company_type}</span></div>
+      <h3>${s.name}</h3><div class="short-name">${s.short_name}</div>
+      <div class="company-meta">
+        <div class="meta-row"><${Icon} name="map" size=${14}/><span>${s.headquarters_address||"Not publicly available"}</span></div>
+        <div class="meta-row"><${Icon} name="users" size=${14}/><span>${s.employee_size||"Not publicly available"}</span></div>
       </div>
-      <div className="growth"><span>YoY growth</span><span><strong className=${negative?"negative":""}>${s.yoy_growth_rate||"Not publicly available"}</strong> <span className="arrow">→</span></span></div>
+      <div class="growth"><span>YoY growth</span><span><strong class=${negative?"negative":""}>${s.yoy_growth_rate||"Not publicly available"}</strong> <span class="arrow">→</span></span></div>
     <//>`;
   }
   function Index() {
@@ -139,41 +139,41 @@
     }),[query,filter]);
     const select=(c)=>{choose(c);navigate("/company/intelligence")};
     return html`<div>
-      <header className="topbar"><span className="brand-mark">J</span><span className="wordmark">JSSATEN <span style=${{color:"#94a3b8",fontWeight:500}}>Placement Intelligence</span></span><span className="spacer"></span><span className="top-pill">PUBLIC RESEARCH PORTAL</span></header>
-      <section className="hero"><div className="hero-inner">
-        <div className="eyebrow"><span className="eyebrow-dot"></span> JSSATEN · INTELLIGENCE PLATFORM</div>
+      <header class="topbar"><span class="brand-mark">J</span><span class="wordmark">JSSATEN <span style=${{color:"#94a3b8",fontWeight:500}}>Placement Intelligence</span></span><span class="spacer"></span><span class="top-pill">PUBLIC RESEARCH PORTAL</span></header>
+      <section class="hero"><div class="hero-inner">
+        <div class="eyebrow"><span class="eyebrow-dot"></span> JSSATEN · INTELLIGENCE PLATFORM</div>
         <h1>JSS Academy of Technical Education Companies Research & Placement Analytics Portal</h1>
-        <p className="hero-sub">Your strategic edge for campus placements</p>
-        <div className="search-wrap"><span className="search-icon"><${Icon} name="search" size=${19}/></span><input aria-label="Search companies" className="search" placeholder="Search companies, industries or headquarters…" value=${draft} onChange=${e=>setDraft(e.target.value)}/><button className="clear-search" style=${{display:draft?"block":"none"}} aria-label="Clear search" onClick=${()=>{setDraft("");setQuery("")}}>×</button></div>
-        <div className="filters">${types.map(t=>html`<button key=${t} className=${"filter "+(filter===t?"active":"")} data-category=${t} onClick=${()=>setFilter(t)}>${t}<span className="count">${counts[t]}</span></button>`)}</div>
+        <p class="hero-sub">Your strategic edge for campus placements</p>
+        <div class="search-wrap"><span class="search-icon"><${Icon} name="search" size=${19}/></span><input aria-label="Search companies" class="search" placeholder="Search companies, industries or headquarters…" value=${draft} onChange=${e=>setDraft(e.target.value)}/><button class="clear-search" style=${{display:draft?"block":"none"}} aria-label="Clear search" onClick=${()=>{setDraft("");setQuery("")}}>×</button></div>
+        <div class="filters">${types.map(t=>html`<button key=${t} class=${"filter "+(filter===t?"active":"")} data-category=${t} onClick=${()=>setFilter(t)}>${t}<span class="count">${counts[t]}</span></button>`)}</div>
       </div></section>
-      <main className="page-inner" style=${{padding:"0 28px"}}>
-        <div className="section-heading"><div><h2>Explore companies</h2><p>Research company profiles, workplace signals and role-relevant skills.</p></div><span className="company-count">${visible.length} ${visible.length===1?"company":"companies"}</span></div>
-        <div className="company-grid">${loading?Array.from({length:8},(_,i)=>html`<div key=${i} className="skeleton"></div>`):visible.length?visible.map(c=>html`<${CompanyCard} key=${c.company_id} company=${c} onSelect=${select}/>`):html`<div className="empty-state"><${Icon} name="search" size=${30}/><h3>No companies found</h3><p>Try another search or clear the selected filters.</p><button className="primary-btn" style=${{marginTop:16}} onClick=${()=>{setDraft("");setQuery("");setFilter("All")}}>Reset filters</button></div>`}</div>
+      <main class="page-inner" style=${{padding:"0 28px"}}>
+        <div class="section-heading"><div><h2>Explore companies</h2><p>Research company profiles, workplace signals and role-relevant skills.</p></div><span class="company-count">${visible.length} ${visible.length===1?"company":"companies"}</span></div>
+        <div class="company-grid">${loading?Array.from({length:8},(_,i)=>html`<div key=${i} class="skeleton"></div>`):visible.length?visible.map(c=>html`<${CompanyCard} key=${c.company_id} company=${c} onSelect=${select}/>`):html`<div class="empty-state"><${Icon} name="search" size=${30}/><h3>No companies found</h3><p>Try another search or clear the selected filters.</p><button class="primary-btn" style=${{marginTop:16}} onClick=${()=>{setDraft("");setQuery("");setFilter("All")}}>Reset filters</button></div>`}</div>
       </main>
-      <footer className="page-footer"><span>JSSATEN · Placement Intelligence Hub</span><span>Company research for informed career decisions</span></footer>
+      <footer class="page-footer"><span>JSSATEN · Placement Intelligence Hub</span><span>Company research for informed career decisions</span></footer>
     </div>`;
   }
   function AppSidebar() {
     const [collapsed,setCollapsed]=useState(false);
     const location=useLocation(), navigate=useNavigate(), {selected}=useCompany();
     const links=[{label:"Company Intelligence",path:"/company/intelligence",icon:"building"},{label:"Skill Intelligence",path:"/company/skills",icon:"skills"}];
-    return html`<aside className=${"sidebar "+(collapsed?"collapsed":"")}>
-      <div className="sidebar-label">Research tools</div>
-      ${links.map(l=>html`<button key=${l.path} title=${collapsed?l.label:""} className=${"side-link "+(location.pathname===l.path?"active":"")} onClick=${()=>navigate(l.path)}><${Icon} name=${l.icon} size=${18}/><span>${l.label}</span></button>`)}
-      <div className="side-spacer"></div>
-      <div className="side-footer"><button className="side-link" title="All Companies" onClick=${()=>navigate("/")}><${Icon} name="home" size=${18}/><span>All Companies</span></button><button className="side-link" title="Collapse sidebar" onClick=${()=>setCollapsed(v=>!v)}><span style=${{display:"inline-flex",fontSize:17}}>${collapsed?"»":"«"}</span><span>Collapse</span></button></div>
+    return html`<aside class=${"sidebar "+(collapsed?"collapsed":"")}>
+      <div class="sidebar-label">Research tools</div>
+      ${links.map(l=>html`<button key=${l.path} title=${collapsed?l.label:""} class=${"side-link "+(location.pathname===l.path?"active":"")} onClick=${()=>navigate(l.path)}><${Icon} name=${l.icon} size=${18}/><span>${l.label}</span></button>`)}
+      <div class="side-spacer"></div>
+      <div class="side-footer"><button class="side-link" title="All Companies" onClick=${()=>navigate("/")}><${Icon} name="home" size=${18}/><span>All Companies</span></button><button class="side-link" title="Collapse sidebar" onClick=${()=>setCollapsed(v=>!v)}><span style=${{display:"inline-flex",fontSize:17}}>${collapsed?"»":"«"}</span><span>Collapse</span></button></div>
     </aside>`;
   }
   function AppLayout() {
     const navigate=useNavigate(), {selected}=useCompany();
     const [mobileMenu,setMobileMenu]=useState(false);
     return html`<div>
-      <header className="topbar"><span className="brand-mark">J</span><span className="wordmark">JSSATEN <span style=${{color:"#94a3b8",fontWeight:500}}>Placement Intelligence</span></span><span className="spacer"></span><span className="top-pill">RESEARCH PORTAL</span></header>
-      <div className="layout"><${AppSidebar}/>
-        <main className="main"><div className="main-head"><button className="icon-btn hide-desktop" onClick=${()=>setMobileMenu(v=>!v)} aria-label="Open navigation"><${Icon} name="menu" size=${17}/></button><span>Company research</span><span style=${{color:"#cbd5e1"}}>/</span><span className="crumb-current">${selected?selected.companyName:"Selected company"}</span><span style=${{marginLeft:"auto",fontSize:11,color:"#94a3b8"}}>JSSATEN</span></div><Outlet/></main>
+      <header class="topbar"><span class="brand-mark">J</span><span class="wordmark">JSSATEN <span style=${{color:"#94a3b8",fontWeight:500}}>Placement Intelligence</span></span><span class="spacer"></span><span class="top-pill">RESEARCH PORTAL</span></header>
+      <div class="layout"><${AppSidebar}/>
+        <main class="main"><div class="main-head"><button class="icon-btn hide-desktop" onClick=${()=>setMobileMenu(v=>!v)} aria-label="Open navigation"><${Icon} name="menu" size=${17}/></button><span>Company research</span><span style=${{color:"#cbd5e1"}}>/</span><span class="crumb-current">${selected?selected.companyName:"Selected company"}</span><span style=${{marginLeft:"auto",fontSize:11,color:"#94a3b8"}}>JSSATEN</span></div><Outlet/></main>
       </div>
-      ${mobileMenu?html`<div className="mobile-backdrop" style=${{display:"block",position:"fixed",inset:0,zIndex:80,background:"rgba(15,23,42,.25)"}} onClick=${()=>setMobileMenu(false)}><div style=${{position:"absolute",left:0,top:0,bottom:0,width:250,background:"#f8fafc",padding:20}} onClick=${e=>e.stopPropagation()}><h3 style=${{fontSize:16,marginBottom:20}}>Research tools</h3><button className="side-link" onClick=${()=>{navigate("/company/intelligence");setMobileMenu(false)}}>▦ <span>Company Intelligence</span></button><button className="side-link" onClick=${()=>{navigate("/company/skills");setMobileMenu(false)}}>⌘ <span>Skill Intelligence</span></button><button className="side-link" onClick=${()=>navigate("/")}>⌂ <span>All Companies</span></button></div></div>`:null}
+      ${mobileMenu?html`<div class="mobile-backdrop" style=${{display:"block",position:"fixed",inset:0,zIndex:80,background:"rgba(15,23,42,.25)"}} onClick=${()=>setMobileMenu(false)}><div style=${{position:"absolute",left:0,top:0,bottom:0,width:250,background:"#f8fafc",padding:20}} onClick=${e=>e.stopPropagation()}><h3 style=${{fontSize:16,marginBottom:20}}>Research tools</h3><button class="side-link" onClick=${()=>{navigate("/company/intelligence");setMobileMenu(false)}}>▦ <span>Company Intelligence</span></button><button class="side-link" onClick=${()=>{navigate("/company/skills");setMobileMenu(false)}}>⌘ <span>Skill Intelligence</span></button><button class="side-link" onClick=${()=>navigate("/")}>⌂ <span>All Companies</span></button></div></div>`:null}
     </div>`;
   }
   function buildIntelligenceSections(profile) {
@@ -196,27 +196,27 @@
   function normalizeDashboardSkills(skillLevels){return (skillLevels||[]).map(s=>({id:s.skill_set_id,name:s.skill_set_name,score:Number(s.required_level)||1,proficiency:s.required_proficiency||""}))}
   function renderValue(field) {
     const value=field.value,key=field.key;
-    if(isNullish(value)) return html`<span className="value-pill"><${Icon} name="check" size=${11}/> Not Available</span>`;
+    if(isNullish(value)) return html`<span class="value-pill"><${Icon} name="check" size=${11}/> Not Available</span>`;
     const text=String(value);
     const urlLike=/url$/.test(key)||/^https?:\/\//i.test(text);
     if(urlLike) return html`<a href=${/^https?:\/\//i.test(text)?text:"https://"+text} target="_blank" rel="noreferrer">${text.replace(/^https?:\/\//,"").replace(/\/$/,"")} <span aria-hidden="true">↗</span></a>`;
     if(key==="primary_contact_email"||key==="contact_person_email") return html`<a href=${"mailto:"+text}>${text}</a>`;
     if(key==="primary_phone_number"||key==="contact_person_phone") return html`<a href=${"tel:"+text.replace(/[^+\d]/g,"")}>${text}</a>`;
-    if(/rating$/.test(key)||["glassdoor_rating","indeed_rating","google_rating"].includes(key)) return html`<span className="rating-chip">★ ${text}</span>`;
+    if(/rating$/.test(key)||["glassdoor_rating","indeed_rating","google_rating"].includes(key)) return html`<span class="rating-chip">★ ${text}</span>`;
     const items=splitItems(text);
     const paragraphKeys=["overview_text","vision_statement","mission_statement","core_value_proposition","brand_sentiment_score","ai_ml_adoption_level","decision_maker_access","website_quality","legal_issues","future_projections","carbon_footprint","ethical_sourcing"];
     const pillItems=["focus_sectors","operating_countries","technology_partners","key_competitors","industry_associations","event_participation","core_values","public_transport_access","flexibility_level","tech_stack","partnership_ecosystem"];
-    if(paragraphKeys.includes(key)||text.length>175&&items.length===1)return html`<p className="value-paragraph">${text}</p>`;
-    if(pillItems.includes(key)||items.length>1&&text.length<220)return html`<div className="value-list">${items.map((item,i)=>html`<span key=${i} className="value-chip">${item}</span>`)}</div>`;
+    if(paragraphKeys.includes(key)||text.length>175&&items.length===1)return html`<p class="value-paragraph">${text}</p>`;
+    if(pillItems.includes(key)||items.length>1&&text.length<220)return html`<div class="value-list">${items.map((item,i)=>html`<span key=${i} class="value-chip">${item}</span>`)}</div>`;
     return html`<span>${text}</span>`;
   }
   function FieldRow({field}) {
-    return html`<div className="field-row"><div className="field-label">${field.label}</div><div className="field-value">${renderValue(field)}</div></div>`;
+    return html`<div class="field-row"><div class="field-label">${field.label}</div><div class="field-value">${renderValue(field)}</div></div>`;
   }
   function SectionCard({section,index}) {
-    return html`<section id=${section.id} className=${"intel-card "+([1,11,17].includes(index)?"full":"")} data-section=${index}>
-      <div className="intel-head"><span className="section-icon"><${Icon} name=${section.icon} size=${17}/></span><div><h2>${section.title}</h2><p>Company profile and research details</p></div><span className="section-count">${section.fields.length} fields</span></div>
-      <div className="field-list">${section.fields.length?section.fields.map(f=>html`<${FieldRow} key=${f.key} field=${f}/>`):html`<div className="field-row"><div className="field-label">Profile details</div><div className="field-value"><span className="value-pill">Not Available</span></div></div>`}</div>
+    return html`<section id=${section.id} class=${"intel-card "+([1,11,17].includes(index)?"full":"")} data-section=${index}>
+      <div class="intel-head"><span class="section-icon"><${Icon} name=${section.icon} size=${17}/></span><div><h2>${section.title}</h2><p>Company profile and research details</p></div><span class="section-count">${section.fields.length} fields</span></div>
+      <div class="field-list">${section.fields.length?section.fields.map(f=>html`<${FieldRow} key=${f.key} field=${f}/>`):html`<div class="field-row"><div class="field-label">Profile details</div><div class="field-value"><span class="value-pill">Not Available</span></div></div>`}</div>
     </section>`;
   }
   function CompanyIntelligence() {
@@ -235,12 +235,12 @@
     },[sections]);
     const scrollToSection=(i)=>{setActive(i);isScrollingRef.current=true;const el=document.getElementById(sections[i].id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"});const tab=document.getElementById("tab-"+i);if(tab)tab.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});setTimeout(()=>{isScrollingRef.current=false},850)};
     return html`<div>
-      <div className="company-info"><${CompanyLogo} company=${company}/><div><div className="company-info-name">${profile.name}</div><div className="company-info-sub">${profile.category||"Company profile"} · ${profile.headquarters_address||"Global"}</div></div><span className="company-info-spacer"></span><a className="external-btn" target="_blank" rel="noreferrer" href=${profile.website_url}><${Icon} name="external" size=${14}/> Website</a><a className="external-btn" target="_blank" rel="noreferrer" href=${profile.linkedin_url}><${Icon} name="external" size=${14}/> LinkedIn</a>
+      <div class="company-info"><${CompanyLogo} company=${company}/><div><div class="company-info-name">${profile.name}</div><div class="company-info-sub">${profile.category||"Company profile"} · ${profile.headquarters_address||"Global"}</div></div><span class="company-info-spacer"></span><a class="external-btn" target="_blank" rel="noreferrer" href=${profile.website_url}><${Icon} name="external" size=${14}/> Website</a><a class="external-btn" target="_blank" rel="noreferrer" href=${profile.linkedin_url}><${Icon} name="external" size=${14}/> LinkedIn</a>
       </div>
-      <div className="content">
-        <div className="detail-intro"><div><div className="eyebrow"><span className="eyebrow-dot"></span> COMPANY PROFILE</div><h1>Company Intelligence</h1><p>Structured research across company identity, culture, technology and career growth.</p></div><span className="data-note">Seed profile · Reference data</span></div>
-        <div className="tabs-shell"><nav className="tabs" aria-label="Company intelligence sections">${sections.map((s,i)=>html`<button id=${"tab-"+i} key=${s.id} className=${"tab "+(active===i?"active":"")} onClick=${()=>scrollToSection(i)}>${s.title}</button>`)}</nav></div>
-        <div className="intelligence-grid" style=${{paddingTop:18}}>${sections.map((s,i)=>html`<${SectionCard} key=${s.id} section=${s} index=${i}/>`)}</div>
+      <div class="content">
+        <div class="detail-intro"><div><div class="eyebrow"><span class="eyebrow-dot"></span> COMPANY PROFILE</div><h1>Company Intelligence</h1><p>Structured research across company identity, culture, technology and career growth.</p></div><span class="data-note">Seed profile · Reference data</span></div>
+        <div class="tabs-shell"><nav class="tabs" aria-label="Company intelligence sections">${sections.map((s,i)=>html`<button id=${"tab-"+i} key=${s.id} class=${"tab "+(active===i?"active":"")} onClick=${()=>scrollToSection(i)}>${s.title}</button>`)}</nav></div>
+        <div class="intelligence-grid" style=${{paddingTop:18}}>${sections.map((s,i)=>html`<${SectionCard} key=${s.id} section=${s} index=${i}/>`)}</div>
       </div>
     </div>`;
   }
@@ -249,24 +249,24 @@
   function SkillCard({skill,open,toggle}) {
     const bloom=proficiencyToBloom(skill.required_level),critical=scoreToCriticality(skill.required_level);
     const topics=TOPICS[skill.skill_set_name]||Array.from({length:10},(_,i)=>"Skill foundations and applied practice · Level "+(i+1));
-    return html`<article className="skill-card">
-      <div className="skill-card-head"><span className="skill-icon"><${Icon} name="skills" size=${17}/></span><div className="skill-main"><div className="skill-name">${skill.skill_set_name}</div><div className="skill-meta"><span className="bloom-badge" style=${{background:bloom.bg,color:bloom.color}}>${bloom.code} · ${bloom.name}</span><span className="criticality-badge" style=${{background:critical.bg,color:critical.color}}>${critical.name}</span></div></div><div className="skill-score">${skill.required_level}<small>/10</small></div></div>
-      <div className="skill-progress"><div style=${{width:(skill.required_level*10)+"%",background:bloom.color}}></div></div>
-      <div className="skill-target"><span>Target proficiency: <strong style=${{color:"#334155"}}>${skill.required_proficiency}</strong></span><span>${scoreToDifficulty(skill.required_level)}</span></div>
-      <button className="roadmap-toggle" onClick=${toggle} aria-expanded=${open}><span>${open?"Hide":"Explore"} 10-level learning roadmap</span><span>${open?"−":"+"}</span></button>
-      ${open?html`<div className="roadmap">${topics.map((topic,i)=>{const level=i+1,locked=level>skill.required_level;return html`<div key=${level} className=${"roadmap-row "+(locked?"locked":"")}><span className=${"level-number "+(locked?"locked":"")}>${locked?"⌑":level}</span><div><div className="roadmap-topic">${topic}</div><div className="roadmap-status">${locked?"Beyond scope":level<=3?"Fundamentals":level<=7?"Intermediate":"Advanced / applied"}</div></div></div>`})}</div>`:null}
+    return html`<article class="skill-card">
+      <div class="skill-card-head"><span class="skill-icon"><${Icon} name="skills" size=${17}/></span><div class="skill-main"><div class="skill-name">${skill.skill_set_name}</div><div class="skill-meta"><span class="bloom-badge" style=${{background:bloom.bg,color:bloom.color}}>${bloom.code} · ${bloom.name}</span><span class="criticality-badge" style=${{background:critical.bg,color:critical.color}}>${critical.name}</span></div></div><div class="skill-score">${skill.required_level}<small>/10</small></div></div>
+      <div class="skill-progress"><div style=${{width:(skill.required_level*10)+"%",background:bloom.color}}></div></div>
+      <div class="skill-target"><span>Target proficiency: <strong style=${{color:"#334155"}}>${skill.required_proficiency}</strong></span><span>${scoreToDifficulty(skill.required_level)}</span></div>
+      <button class="roadmap-toggle" onClick=${toggle} aria-expanded=${open}><span>${open?"Hide":"Explore"} 10-level learning roadmap</span><span>${open?"−":"+"}</span></button>
+      ${open?html`<div class="roadmap">${topics.map((topic,i)=>{const level=i+1,locked=level>skill.required_level;return html`<div key=${level} class=${"roadmap-row "+(locked?"locked":"")}><span class=${"level-number "+(locked?"locked":"")}>${locked?"⌑":level}</span><div><div class="roadmap-topic">${topic}</div><div class="roadmap-status">${locked?"Beyond scope":level<=3?"Fundamentals":level<=7?"Intermediate":"Advanced / applied"}</div></div></div>`})}</div>`:null}
     </article>`;
   }
   function SkillIntelligence() {
     const {selected}=useCompany(),[expanded,setExpanded]=useState({});
     const company=selected.company;
     const skills=useMemo(()=>company.skill_levels.slice().sort((a,b)=>b.required_level-a.required_level),[company]);
-    return html`<div className="content">
-      <div className="skill-header"><${CompanyLogo} company=${company} className="skill-logo"/><div><div className="eyebrow" style=${{marginBottom:7}}>ROLE-RELEVANT PREPARATION</div><h1>${company.short_json.short_name} Skill Intelligence</h1><p>Competency targets and structured learning roadmaps for placement preparation.</p></div></div>
-      <div className="legend-card"><div className="legend-title">Bloom learning levels</div><div className="bloom-legend">${BLOOM.map(b=>html`<div key=${b.code} className="bloom-item"><span className="bloom-code" style=${{background:b.color}}>${b.code}</span><span><strong>${b.name}</strong></span></div>`)}</div></div>
-      <div className="legend-card"><div className="legend-title">Skill criticality</div><div className="criticality-legend"><div className="criticality"><span className="criticality-dot" style=${{background:"#dc2626"}}></span><div><strong>Critical</strong><span>Score 7–10</span></div></div><div className="criticality"><span className="criticality-dot" style=${{background:"#d97706"}}></span><div><strong>Important</strong><span>Score 5–6</span></div></div><div className="criticality"><span className="criticality-dot" style=${{background:"#16a34a"}}></span><div><strong>Baseline</strong><span>Score 1–4</span></div></div></div></div>
-      <div className="section-heading"><div><h2>Required skills</h2><p>Expand a skill to view the 10-level topic ladder. Rows above the target are marked beyond scope.</p></div><span className="company-count">12 skills</span></div>
-      <div className="skill-list">${skills.map(skill=>html`<${SkillCard} key=${skill.skill_set_id} skill=${skill} open=${!!expanded[skill.skill_set_id]} toggle=${()=>setExpanded(s=>({...s,[skill.skill_set_id]:!s[skill.skill_set_id]}))}/>`)}</div>
+    return html`<div class="content">
+      <div class="skill-header"><${CompanyLogo} company=${company} className="skill-logo"/><div><div class="eyebrow" style=${{marginBottom:7}}>ROLE-RELEVANT PREPARATION</div><h1>${company.short_json.short_name} Skill Intelligence</h1><p>Competency targets and structured learning roadmaps for placement preparation.</p></div></div>
+      <div class="legend-card"><div class="legend-title">Bloom learning levels</div><div class="bloom-legend">${BLOOM.map(b=>html`<div key=${b.code} class="bloom-item"><span class="bloom-code" style=${{background:b.color}}>${b.code}</span><span><strong>${b.name}</strong></span></div>`)}</div></div>
+      <div class="legend-card"><div class="legend-title">Skill criticality</div><div class="criticality-legend"><div class="criticality"><span class="criticality-dot" style=${{background:"#dc2626"}}></span><div><strong>Critical</strong><span>Score 7–10</span></div></div><div class="criticality"><span class="criticality-dot" style=${{background:"#d97706"}}></span><div><strong>Important</strong><span>Score 5–6</span></div></div><div class="criticality"><span class="criticality-dot" style=${{background:"#16a34a"}}></span><div><strong>Baseline</strong><span>Score 1–4</span></div></div></div></div>
+      <div class="section-heading"><div><h2>Required skills</h2><p>Expand a skill to view the 10-level topic ladder. Rows above the target are marked beyond scope.</p></div><span class="company-count">12 skills</span></div>
+      <div class="skill-list">${skills.map(skill=>html`<${SkillCard} key=${skill.skill_set_id} skill=${skill} open=${!!expanded[skill.skill_set_id]} toggle=${()=>setExpanded(s=>({...s,[skill.skill_set_id]:!s[skill.skill_set_id]}))}/>`)}</div>
     </div>`;
   }
   function CompanyGate({children}) {
@@ -275,7 +275,7 @@
   }
   function NotFound() {
     const navigate=useNavigate();
-    return html`<div><header className="topbar"><span className="brand-mark">J</span><span className="wordmark">JSSATEN Placement Intelligence</span></header><div className="not-found"><div><span className="brand-mark" style=${{margin:"0 auto",width:50,height:50}}>?</span><h1>Page not found</h1><p style=${{color:"#64748b",marginBottom:18}}>The page you requested does not exist.</p><button className="primary-btn" onClick=${()=>navigate("/")}>Return to all companies</button></div></div></div>`;
+    return html`<div><header class="topbar"><span class="brand-mark">J</span><span class="wordmark">JSSATEN Placement Intelligence</span></header><div class="not-found"><div><span class="brand-mark" style=${{margin:"0 auto",width:50,height:50}}>?</span><h1>Page not found</h1><p style=${{color:"#64748b",marginBottom:18}}>The page you requested does not exist.</p><button class="primary-btn" onClick=${()=>navigate("/")}>Return to all companies</button></div></div></div>`;
   }
   function App() {
     return html`<${CompanyProvider}><${BrowserRouter}><${Routes}>
