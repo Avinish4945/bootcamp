@@ -2,7 +2,62 @@
   const { useState, useEffect, useMemo, useRef, createContext, useContext } = React;
   const { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } = ReactRouterDOM;
   const html = htm.bind(React.createElement);
-  const SEED_COMPANIES = window.SEED_COMPANIES || [];
+  const SEED_COMPANIES = []; // Kept empty intentionally: live rendering reads Supabase only.
+  function supabaseConfig() {
+    const config=window.SUPABASE_CONFIG||{};
+    if(!config.url||!config.anonKey)throw new Error("Supabase is not configured. Add the project URL and anon/public key to public/supabase-config.js, then redeploy.");
+    return {url:config.url.endsWith("/")?config.url.slice(0,-1):config.url,key:config.anonKey};
+  }
+  async function supabaseSelect(table,columns,filters,orderBy) {
+    const config=supabaseConfig();
+    const params=["select="+encodeURIComponent(columns)];
+    (filters||[]).forEach(filter=>params.push(encodeURIComponent(filter.column)+"=eq."+encodeURIComponent(String(filter.value))));
+    if(orderBy)params.push("order="+encodeURIComponent(orderBy));
+    let response;
+    try{response=await fetch(config.url+"/rest/v1/"+table+"?"+params.join("&"),{method:"GET",headers:{apikey:config.key,Authorization:"Bearer "+config.key,Accept:"application/json"}});}
+    catch(error){throw new Error("Could not reach Supabase. Check the project URL and network access. "+errorText(error));}
+    const body=await response.text();let data=null;
+    try{data=body?JSON.parse(body):null}catch(_){data=body;}
+    if(!response.ok)throw new Error(data&&data.message?data.message:"Supabase request failed ("+response.status+"): "+String(body).slice(0,300));
+    return data;
+  }
+  function errorText(error) { return error && error.message ? error.message : String(error || "Unknown error"); }
+  function mapCompanyRow(row) { return {company_id:row.company_id,short_json:row.short_json || {},full_json:row.full_json || null}; }
+  async function fetchCompanySummaries() {
+    const data=await supabaseSelect("company_json","company_id,short_json",[],"company_id.asc");
+    return (data||[]).map(row=>{const shortJson={...(row.short_json||{}),company_id:row.company_id};return {company_id:row.company_id,short_json:{...normalizeCompanySummary(shortJson),...shortJson},full_json:null};});
+  }
+  async function fetchCompanyProfile(id) {
+    const rows=await supabaseSelect("company_json","company_id,short_json,full_json",[{column:"company_id",value:id}]);
+    const data=(rows||[])[0]||null;
+    if(!data) throw new Error("No company profile was found for this company ID.");
+    return mapCompanyRow(data);
+  }
+  async function fetchCompanySkills(id) {
+    const [levels,mastersRows,proficiencyRows,topicsRows]=await Promise.all([
+      supabaseSelect("company_skill_levels","company_id,skill_set_id,required_level,required_proficiency_level_id",[{column:"company_id",value:id}]),
+      supabaseSelect("skill_set_master","skill_set_id,skill_set_name,short_name",[]),
+      supabaseSelect("proficiency_levels","proficiency_level_id,proficiency_name,proficiency_code",[]),
+      supabaseSelect("skill_set_topics","skill_set_id,level_number,topics",[],"level_number.asc")
+    ]);
+    const masters=new Map((mastersRows||[]).map(x=>[String(x.skill_set_id),x]));
+    const proficiencies=new Map((proficiencyRows||[]).map(x=>[String(x.proficiency_level_id),x]));
+    const topicRows=new Map();
+    for(const row of topicsRows||[]) {
+      const key=String(row.skill_set_id);
+      if(!topicRows.has(key)) topicRows.set(key,Array(10).fill(null));
+      let topic=row.topics;
+      if(typeof topic==="string"){try{topic=JSON.parse(topic)}catch(_){}}
+      if(topic&&typeof topic==="object"&&!Array.isArray(topic)) topic=topic.topic||topic.title||topic.name||JSON.stringify(topic);
+      topicRows.get(key)[Math.max(0,Number(row.level_number)-1)]=Array.isArray(topic)?topic.join(", "):String(topic||"");
+    }
+    const raw=(levels||[]).map(row=>{
+      const master=masters.get(String(row.skill_set_id))||{};
+      const proficiency=proficiencies.get(String(row.required_proficiency_level_id))||{};
+      return {skill_set_id:row.skill_set_id,skill_set_name:master.skill_set_name||master.short_name||("Skill "+row.skill_set_id),short_name:master.short_name||"",required_level:Number(row.required_level)||1,required_proficiency:proficiency.proficiency_name||proficiency.proficiency_code||"",required_proficiency_level_id:row.required_proficiency_level_id,topics:(topicRows.get(String(row.skill_set_id))||Array(10).fill(null)).map((topic,i)=>topic||("Skill foundations and applied practice · Level "+(i+1)))};
+    });
+    return normalizeDashboardSkills(raw).sort((a,b)=>b.required_level-a.required_level);
+  }
   const SECTIONS = [
     { title:"Company Identity", icon:"building-2", keys:["name","short_name","category","incorporation_year","nature_of_company"] },
     { title:"Overview & Vision", icon:"book-open", keys:["overview_text","vision_statement","mission_statement","core_values","history_timeline"] },
@@ -76,10 +131,9 @@
   function restoreCompany() {
     try {
       const saved = JSON.parse(localStorage.getItem("selected-company") || "null");
-      if (!saved) return null;
-      const match = SEED_COMPANIES.find(c => String(c.company_id) === String(saved.companyId));
-      if (!match) return null;
-      return { companyId:match.company_id, companyName:match.short_json.short_name, logoUrl:match.short_json.logo_url, company:match };
+      if (!saved || saved.companyId == null) return null;
+      const short_json={short_name:saved.companyName||"Selected company",name:saved.companyName||"Selected company",logo_url:saved.logoUrl||"",category:"",company_type:"Regular"};
+      return {companyId:saved.companyId,companyName:short_json.short_name,logoUrl:short_json.logo_url,company:{company_id:saved.companyId,short_json,full_json:null}};
     } catch (_) { return null; }
   }
   function CompanyProvider({children}) {
@@ -128,15 +182,16 @@
   }
   function Index() {
     const navigate=useNavigate(), {choose}=useCompany();
-    const [draft,setDraft]=useState(""),[query,setQuery]=useState(""),[filter,setFilter]=useState("All"),[loading,setLoading]=useState(true);
+    const [draft,setDraft]=useState(""),[query,setQuery]=useState(""),[filter,setFilter]=useState("All"),[loading,setLoading]=useState(true),[companies,setCompanies]=useState([]),[loadError,setLoadError]=useState("");
+    const loadCompanies=()=>{setLoading(true);setLoadError("");fetchCompanySummaries().then(setCompanies).catch(e=>setLoadError(errorText(e))).finally(()=>setLoading(false));};
+    useEffect(()=>{loadCompanies()},[]);
     useEffect(()=>{const t=setTimeout(()=>setQuery(draft),200);return ()=>clearTimeout(t)},[draft]);
-    useEffect(()=>{const t=setTimeout(()=>setLoading(false),220);return ()=>clearTimeout(t)},[]);
     const types=["All","Super Dream","Dream","Standard","Regular"];
-    const counts=useMemo(()=>Object.fromEntries(types.map(t=>[t,t==="All"?SEED_COMPANIES.length:SEED_COMPANIES.filter(c=>c.short_json.company_type===t).length])),[]);
-    const visible=useMemo(()=>SEED_COMPANIES.filter(c=>{
-      const s=c.short_json, matches=(s.name+" "+s.short_name+" "+s.category+" "+s.headquarters_address).toLowerCase().includes(query.toLowerCase());
+    const counts=useMemo(()=>Object.fromEntries(types.map(t=>[t,t==="All"?companies.length:companies.filter(c=>(c.short_json||{}).company_type===t).length])),[companies]);
+    const visible=useMemo(()=>companies.filter(c=>{
+      const s=c.short_json||{}, matches=(s.name+" "+s.short_name+" "+s.category+" "+s.headquarters_address).toLowerCase().includes(query.toLowerCase());
       return matches&&(filter==="All"||s.company_type===filter);
-    }),[query,filter]);
+    }),[companies,query,filter]);
     const select=(c)=>{choose(c);navigate("/company/intelligence")};
     return html`<div>
       <header class="topbar"><span class="brand-mark">J</span><span class="wordmark">JSSATEN <span style=${{color:"#94a3b8",fontWeight:500}}>Placement Intelligence</span></span><span class="spacer"></span><span class="top-pill">PUBLIC RESEARCH PORTAL</span></header>
@@ -149,7 +204,7 @@
       </div></section>
       <main class="page-inner" style=${{padding:"0 28px"}}>
         <div class="section-heading"><div><h2>Explore companies</h2><p>Research company profiles, workplace signals and role-relevant skills.</p></div><span class="company-count">${visible.length} ${visible.length===1?"company":"companies"}</span></div>
-        <div class="company-grid">${loading?Array.from({length:8},(_,i)=>html`<div key=${i} class="skeleton"></div>`):visible.length?visible.map(c=>html`<${CompanyCard} key=${c.company_id} company=${c} onSelect=${select}/>`):html`<div class="empty-state"><${Icon} name="search" size=${30}/><h3>No companies found</h3><p>Try another search or clear the selected filters.</p><button class="primary-btn" style=${{marginTop:16}} onClick=${()=>{setDraft("");setQuery("");setFilter("All")}}>Reset filters</button></div>`}</div>
+        <div class="company-grid">${loading?Array.from({length:8},(_,i)=>html`<div key=${i} class="skeleton"></div>`):loadError?html`<div class="empty-state"><h3>Could not load companies</h3><p>${loadError}</p><button class="primary-btn" style=${{marginTop:16}} onClick=${loadCompanies}>Retry</button></div>`:visible.length?visible.map(c=>html`<${CompanyCard} key=${c.company_id} company=${c} onSelect=${select}/>`):html`<div class="empty-state"><${Icon} name="search" size=${30}/><h3>No companies found</h3><p>Try another search or clear the selected filters.</p><button class="primary-btn" style=${{marginTop:16}} onClick=${()=>{setDraft("");setQuery("");setFilter("All")}}>Reset filters</button></div>`}</div>
       </main>
       <footer class="page-footer"><span>JSSATEN · Placement Intelligence Hub</span><span>Company research for informed career decisions</span></footer>
     </div>`;
@@ -193,7 +248,7 @@
   function scoreToDifficulty(score){return score>=8?"EXPERT":score>=6?"ADVANCED":score>=4?"PRO":"BEGINNER"}
   function normalizeCompanySummary(short_json){const s=asRecord(short_json);return {company_id:s.company_id,name:s.name||"",short_name:s.short_name||"",logo_url:s.logo_url||"",category:s.category||"",company_type:s.company_type||"Regular",headquarters_address:s.headquarters_address||"",employee_size:s.employee_size||"",yoy_growth_rate:s.yoy_growth_rate||""}}
   function normalizeCompanyProfile(full_json,short_json){return Object.assign({},asRecord(short_json),asRecord(full_json))}
-  function normalizeDashboardSkills(skillLevels){return (skillLevels||[]).map(s=>({id:s.skill_set_id,name:s.skill_set_name,score:Number(s.required_level)||1,proficiency:s.required_proficiency||""}))}
+  function normalizeDashboardSkills(skillLevels){return (skillLevels||[]).map(s=>({...s,id:s.skill_set_id,name:s.skill_set_name,score:Number(s.required_level)||1,proficiency:s.required_proficiency||"",required_level:Number(s.required_level)||1,required_proficiency:s.required_proficiency||""}))}
   function renderValue(field) {
     const value=field.value,key=field.key;
     if(isNullish(value)) return html`<span class="value-pill"><${Icon} name="check" size=${11}/> Not Available</span>`;
@@ -221,9 +276,12 @@
   }
   function CompanyIntelligence() {
     const {selected}=useCompany(), navigate=useNavigate();
-    const company=selected.company, profile=normalizeCompanyProfile(company.full_json,company.short_json);
-    const sections=useMemo(()=>buildIntelligenceSections(profile),[company]);
+    const [company,setCompany]=useState(selected?selected.company:null),[profileLoading,setProfileLoading]=useState(true),[profileError,setProfileError]=useState("");
     const [active,setActive]=useState(0),isScrollingRef=useRef(false);
+    const reloadProfile=()=>{if(!selected)return;setProfileLoading(true);setProfileError("");fetchCompanyProfile(selected.companyId).then(row=>{const next={...row,skill_levels:[]};setCompany(next)}).catch(e=>setProfileError(errorText(e))).finally(()=>setProfileLoading(false));};
+    useEffect(()=>{reloadProfile()},[selected&&selected.companyId]);
+    const profile=normalizeCompanyProfile(company&&company.full_json,company&&company.short_json);
+    const sections=useMemo(()=>buildIntelligenceSections(profile),[company]);
     useEffect(()=>{
       const observer=new IntersectionObserver(entries=>{
         if(isScrollingRef.current)return;
@@ -233,12 +291,17 @@
       sections.forEach((s,i)=>{const el=document.getElementById(s.id);if(el){el.dataset.section=String(i);observer.observe(el)}});
       return ()=>observer.disconnect();
     },[sections]);
+    if(profileLoading)return html`<div class="content"><div class="skeleton" style=${{height:150,marginBottom:18}}></div><div class="skeleton" style=${{height:320}}></div></div>`;
+    if(profileError)return html`<div class="content"><div class="empty-state"><h3>Could not load company profile</h3><p>${profileError}</p><button class="primary-btn" onClick=${reloadProfile}>Retry</button></div></div>`;
+    if(!company||!company.full_json)return html`<div class="content"><div class="empty-state"><h3>Company profile unavailable</h3><p>The selected company did not return a full_json profile.</p><button class="primary-btn" onClick=${()=>navigate("/")}>Back to companies</button></div></div>`;
+    // active-tab state is declared before the loading guards above.
+    // Intersection observer is declared above the loading guards.
     const scrollToSection=(i)=>{setActive(i);isScrollingRef.current=true;const el=document.getElementById(sections[i].id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"});const tab=document.getElementById("tab-"+i);if(tab)tab.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});setTimeout(()=>{isScrollingRef.current=false},850)};
     return html`<div>
       <div class="company-info"><${CompanyLogo} company=${company}/><div><div class="company-info-name">${profile.name}</div><div class="company-info-sub">${profile.category||"Company profile"} · ${profile.headquarters_address||"Global"}</div></div><span class="company-info-spacer"></span><a class="external-btn" target="_blank" rel="noreferrer" href=${profile.website_url}><${Icon} name="external" size=${14}/> Website</a><a class="external-btn" target="_blank" rel="noreferrer" href=${profile.linkedin_url}><${Icon} name="external" size=${14}/> LinkedIn</a>
       </div>
       <div class="content">
-        <div class="detail-intro"><div><div class="eyebrow"><span class="eyebrow-dot"></span> COMPANY PROFILE</div><h1>Company Intelligence</h1><p>Structured research across company identity, culture, technology and career growth.</p></div><span class="data-note">Seed profile · Reference data</span></div>
+        <div class="detail-intro"><div><div class="eyebrow"><span class="eyebrow-dot"></span> COMPANY PROFILE</div><h1>Company Intelligence</h1><p>Structured research across company identity, culture, technology and career growth.</p></div><span class="data-note">Supabase · Live data</span></div>
         <div class="tabs-shell"><nav class="tabs" aria-label="Company intelligence sections">${sections.map((s,i)=>html`<button id=${"tab-"+i} key=${s.id} class=${"tab "+(active===i?"active":"")} onClick=${()=>scrollToSection(i)}>${s.title}</button>`)}</nav></div>
         <div class="intelligence-grid" style=${{paddingTop:18}}>${sections.map((s,i)=>html`<${SectionCard} key=${s.id} section=${s} index=${i}/>`)}</div>
       </div>
@@ -248,7 +311,7 @@
   function scoreToCriticality(score){return score>=7?{name:"Critical",color:"#b91c1c",bg:"#fef2f2"}:score>=5?{name:"Important",color:"#b45309",bg:"#fffbeb"}:{name:"Baseline",color:"#15803d",bg:"#f0fdf4"}}
   function SkillCard({skill,open,toggle}) {
     const bloom=proficiencyToBloom(skill.required_level),critical=scoreToCriticality(skill.required_level);
-    const topics=TOPICS[skill.skill_set_name]||Array.from({length:10},(_,i)=>"Skill foundations and applied practice · Level "+(i+1));
+    const topics=skill.topics||Array.from({length:10},(_,i)=>"Skill foundations and applied practice · Level "+(i+1));
     return html`<article class="skill-card">
       <div class="skill-card-head"><span class="skill-icon"><${Icon} name="skills" size=${17}/></span><div class="skill-main"><div class="skill-name">${skill.skill_set_name}</div><div class="skill-meta"><span class="bloom-badge" style=${{background:bloom.bg,color:bloom.color}}>${bloom.code} · ${bloom.name}</span><span class="criticality-badge" style=${{background:critical.bg,color:critical.color}}>${critical.name}</span></div></div><div class="skill-score">${skill.required_level}<small>/10</small></div></div>
       <div class="skill-progress"><div style=${{width:(skill.required_level*10)+"%",background:bloom.color}}></div></div>
@@ -258,14 +321,17 @@
     </article>`;
   }
   function SkillIntelligence() {
-    const {selected}=useCompany(),[expanded,setExpanded]=useState({});
+    const {selected}=useCompany(),[expanded,setExpanded]=useState({}),[skills,setSkills]=useState([]),[skillsLoading,setSkillsLoading]=useState(true),[skillsError,setSkillsError]=useState("");
     const company=selected.company;
-    const skills=useMemo(()=>company.skill_levels.slice().sort((a,b)=>b.required_level-a.required_level),[company]);
+    const loadSkills=()=>{setSkillsLoading(true);setSkillsError("");fetchCompanySkills(selected.companyId).then(setSkills).catch(e=>setSkillsError(errorText(e))).finally(()=>setSkillsLoading(false));};
+    useEffect(()=>{loadSkills()},[selected&&selected.companyId]);
+    if(skillsLoading)return html`<div class="content"><div class="skeleton" style=${{height:120,marginBottom:18}}></div><div class="skeleton" style=${{height:180,marginBottom:12}}></div><div class="skeleton" style=${{height:180}}></div></div>`;
+    if(skillsError)return html`<div class="content"><div class="empty-state"><h3>Could not load skill intelligence</h3><p>${skillsError}</p><button class="primary-btn" onClick=${loadSkills}>Retry</button></div></div>`;
     return html`<div class="content">
       <div class="skill-header"><${CompanyLogo} company=${company} className="skill-logo"/><div><div class="eyebrow" style=${{marginBottom:7}}>ROLE-RELEVANT PREPARATION</div><h1>${company.short_json.short_name} Skill Intelligence</h1><p>Competency targets and structured learning roadmaps for placement preparation.</p></div></div>
       <div class="legend-card"><div class="legend-title">Bloom learning levels</div><div class="bloom-legend">${BLOOM.map(b=>html`<div key=${b.code} class="bloom-item"><span class="bloom-code" style=${{background:b.color}}>${b.code}</span><span><strong>${b.name}</strong></span></div>`)}</div></div>
       <div class="legend-card"><div class="legend-title">Skill criticality</div><div class="criticality-legend"><div class="criticality"><span class="criticality-dot" style=${{background:"#dc2626"}}></span><div><strong>Critical</strong><span>Score 7–10</span></div></div><div class="criticality"><span class="criticality-dot" style=${{background:"#d97706"}}></span><div><strong>Important</strong><span>Score 5–6</span></div></div><div class="criticality"><span class="criticality-dot" style=${{background:"#16a34a"}}></span><div><strong>Baseline</strong><span>Score 1–4</span></div></div></div></div>
-      <div class="section-heading"><div><h2>Required skills</h2><p>Expand a skill to view the 10-level topic ladder. Rows above the target are marked beyond scope.</p></div><span class="company-count">12 skills</span></div>
+      <div class="section-heading"><div><h2>Required skills</h2><p>Expand a skill to view the 10-level topic ladder. Rows above the target are marked beyond scope.</p></div><span class="company-count">${skills.length} skills</span></div>
       <div class="skill-list">${skills.map(skill=>html`<${SkillCard} key=${skill.skill_set_id} skill=${skill} open=${!!expanded[skill.skill_set_id]} toggle=${()=>setExpanded(s=>({...s,[skill.skill_set_id]:!s[skill.skill_set_id]}))}/>`)}</div>
     </div>`;
   }
