@@ -6,11 +6,11 @@ The public placement research portal preserves the original company research int
 
 ## Phase 2 — Supabase
 
-This hosted Hatchable version uses the browser UMD build of @supabase/supabase-js because Hatchable serves static browser-ready files and does not run a Vite build or npm install during deployment. Paste the Supabase project URL and anon/public key into `public/supabase-config.js` (`url` and `anonKey`), then redeploy. This is the only manual configuration step. Never put a service-role key in browser code.
+Hatchable serves the browser app as static files and runs the Supabase data API server-side. Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in Hatchable's project secrets, then deploy. The browser calls `/api/supabase`; it never receives either credential. For local Vite development, put them in an ignored root `.env.local` file. The API uses the anon key and preserves the database's existing access policies. Do not configure or use a service-role key for this app.
 
 Company cards read only `public.company_json(company_id, short_json)`. Company details read only `public.company_json(company_id, short_json, full_json)` filtered by `company_id`. Skills use only `public.company_skill_levels`, `public.skill_set_master`, `public.proficiency_levels`, and `public.skill_set_topics`; the four small result sets are combined in the browser. The integration is read-only: no writes, schema changes, migrations, auth, or login are added.
 
-The client expects the Supabase anon key to have read access to those tables under the database's existing policies. No RLS or permissions are changed by this app.
+The Supabase anon key must have read access to those tables under the database's existing policies. No RLS or permissions are changed by this app. The API only permits the listed read queries and does not accept table or column names from clients.
 
 ## Local development note
 

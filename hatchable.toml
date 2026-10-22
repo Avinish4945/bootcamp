@@ -1,5 +1,16 @@
 # Hatchable project manifest. This file marks the folder as a
 # Hatchable project and declares the services it uses.
 # Reference: https://hatchable.com/docs/developers/config
+
 name = "JSSATEN Placement Intelligence Hub"
-description = "Public company research and placement analytics portal for JSS Academy of Technical Education. Phase 1 uses hardcoded Accenture seed data only; no app login or Supabase integration."
+description = "Public company research and placement analytics portal for JSS Academy of Technical Education."
+
+[[secret]]
+name = "SUPABASE_URL"
+required = true
+description = "Supabase project URL"
+
+[[secret]]
+name = "SUPABASE_ANON_KEY"
+required = true
+description = "Supabase anon key used by the server-side data API"

@@ -3,43 +3,30 @@
   const { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } = ReactRouterDOM;
   const html = htm.bind(React.createElement);
   const SEED_COMPANIES = []; // Kept empty intentionally: live rendering reads Supabase only.
-  function supabaseConfig() {
-    const config=window.SUPABASE_CONFIG||{};
-    if(!config.url||!config.anonKey)throw new Error("Supabase is not configured. Add the project URL and anon/public key to public/supabase-config.js, then redeploy.");
-    return {url:config.url.endsWith("/")?config.url.slice(0,-1):config.url,key:config.anonKey};
-  }
-  async function supabaseSelect(table,columns,filters,orderBy) {
-    const config=supabaseConfig();
-    const params=["select="+encodeURIComponent(columns)];
-    (filters||[]).forEach(filter=>params.push(encodeURIComponent(filter.column)+"=eq."+encodeURIComponent(String(filter.value))));
-    if(orderBy)params.push("order="+encodeURIComponent(orderBy));
+  async function supabaseRequest(resource,parameters) {
+    const params=new URLSearchParams({resource,...(parameters||{})});
     let response;
-    try{response=await fetch(config.url+"/rest/v1/"+table+"?"+params.join("&"),{method:"GET",headers:{apikey:config.key,Authorization:"Bearer "+config.key,Accept:"application/json"}});}
-    catch(error){throw new Error("Could not reach Supabase. Check the project URL and network access. "+errorText(error));}
-    const body=await response.text();let data=null;
-    try{data=body?JSON.parse(body):null}catch(_){data=body;}
-    if(!response.ok)throw new Error(data&&data.message?data.message:"Supabase request failed ("+response.status+"): "+String(body).slice(0,300));
+    try{response=await fetch("/api/supabase?"+params.toString(),{headers:{Accept:"application/json"}});}
+    catch(error){throw new Error("Could not reach the data API. Check the network connection. "+errorText(error));}
+    let data;
+    try{data=await response.json();}catch(error){throw new Error("Data API returned invalid JSON. "+errorText(error));}
+    if(!response.ok)throw new Error(data&&data.error?data.error:"Data request failed ("+response.status+").");
     return data;
   }
   function errorText(error) { return error && error.message ? error.message : String(error || "Unknown error"); }
   function mapCompanyRow(row) { return {company_id:row.company_id,short_json:row.short_json || {},full_json:row.full_json || null}; }
   async function fetchCompanySummaries() {
-    const data=await supabaseSelect("company_json","company_id,short_json",[],"company_id.asc");
+    const data=await supabaseRequest("companies");
     return (data||[]).map(row=>{const shortJson={...(row.short_json||{}),company_id:row.company_id};return {company_id:row.company_id,short_json:{...normalizeCompanySummary(shortJson),...shortJson},full_json:null};});
   }
   async function fetchCompanyProfile(id) {
-    const rows=await supabaseSelect("company_json","company_id,short_json,full_json",[{column:"company_id",value:id}]);
+    const rows=await supabaseRequest("company",{company_id:String(id)});
     const data=(rows||[])[0]||null;
     if(!data) throw new Error("No company profile was found for this company ID.");
     return mapCompanyRow(data);
   }
   async function fetchCompanySkills(id) {
-    const [levels,mastersRows,proficiencyRows,topicsRows]=await Promise.all([
-      supabaseSelect("company_skill_levels","company_id,skill_set_id,required_level,required_proficiency_level_id",[{column:"company_id",value:id}]),
-      supabaseSelect("skill_set_master","skill_set_id,skill_set_name,short_name",[]),
-      supabaseSelect("proficiency_levels","proficiency_level_id,proficiency_name,proficiency_code",[]),
-      supabaseSelect("skill_set_topics","skill_set_id,level_number,topics",[],"level_number.asc")
-    ]);
+    const {levels,mastersRows,proficiencyRows,topicsRows}=await supabaseRequest("skills",{company_id:String(id)});
     const masters=new Map((mastersRows||[]).map(x=>[String(x.skill_set_id),x]));
     const proficiencies=new Map((proficiencyRows||[]).map(x=>[String(x.proficiency_level_id),x]));
     const topicRows=new Map();
@@ -226,7 +213,7 @@
     return html`<div>
       <header class="topbar"><span class="brand-mark">J</span><span class="wordmark">JSSATEN <span style=${{color:"#94a3b8",fontWeight:500}}>Placement Intelligence</span></span><span class="spacer"></span><span class="top-pill">RESEARCH PORTAL</span></header>
       <div class="layout"><${AppSidebar}/>
-        <main class="main"><div class="main-head"><button class="icon-btn hide-desktop" onClick=${()=>setMobileMenu(v=>!v)} aria-label="Open navigation"><${Icon} name="menu" size=${17}/></button><span>Company research</span><span style=${{color:"#cbd5e1"}}>/</span><span class="crumb-current">${selected?selected.companyName:"Selected company"}</span><span style=${{marginLeft:"auto",fontSize:11,color:"#94a3b8"}}>JSSATEN</span></div>${children}</main>
+        <main class="main"><div class="main-head"><button class="icon-btn hide-desktop" onClick=${()=>setMobileMenu(v=>!v)} aria-label="Open navigation"><${Icon} name="menu" size=${17}/></button><button class="back-button" onClick=${()=>navigate("/")} aria-label="Back to all companies"><span aria-hidden="true">←</span><span>All companies</span></button><span class="breadcrumb-divider" aria-hidden="true">/</span><span class="crumb-current">${selected?selected.companyName:"Selected company"}</span><span class="main-head-brand">JSSATEN</span></div>${children}</main>
       </div>
       ${mobileMenu?html`<div class="mobile-backdrop" style=${{display:"block",position:"fixed",inset:0,zIndex:80,background:"rgba(15,23,42,.25)"}} onClick=${()=>setMobileMenu(false)}><div style=${{position:"absolute",left:0,top:0,bottom:0,width:250,background:"#f8fafc",padding:20}} onClick=${e=>e.stopPropagation()}><h3 style=${{fontSize:16,marginBottom:20}}>Research tools</h3><button class="side-link" onClick=${()=>{navigate("/company/intelligence");setMobileMenu(false)}}>▦ <span>Company Intelligence</span></button><button class="side-link" onClick=${()=>{navigate("/company/skills");setMobileMenu(false)}}>⌘ <span>Skill Intelligence</span></button><button class="side-link" onClick=${()=>navigate("/")}>⌂ <span>All Companies</span></button></div></div>`:null}
     </div>`;

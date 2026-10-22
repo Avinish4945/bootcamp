@@ -2,9 +2,15 @@
 
 [![Deploy to Hatchable](https://hatchable.com/deploy-button.svg)](https://hatchable.com/deploy?repo=https://github.com/Avinish4945/bootcamp)
 
-Public company research and placement analytics portal for JSS Academy of Technical Education. Phase 1 uses hardcoded Accenture seed data only; no app login or Supabase integration.
+Public company research and placement analytics portal for JSS Academy of Technical Education. The browser app reads company and skills data through a Hatchable server-side API. Supabase credentials are stored in Hatchable project secrets and are not included in public assets.
 
-This folder is a complete Hatchable project. Everything the app needs is in these files: pages, API routes, database migrations, seed data, and the hatchable.toml manifest that declares the services and keys it uses.
+This folder is a complete Hatchable project. The `api/` directory contains the server-side data route, and `hatchable.toml` declares the secrets it uses.
+
+## Supabase secrets
+
+Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the Hatchable project Setup page before deploying. Use the anon key, not a service-role key; the API uses the existing Supabase policies for read access. Secret values are managed in Hatchable and must not be committed to this repository.
+
+For local Vite development, put those same values in an ignored `.env.local` file at the project root. The Vite-only API middleware reads them server-side; it does not expose them through `import.meta.env` or browser assets.
 
 ## Run your own copy
 
